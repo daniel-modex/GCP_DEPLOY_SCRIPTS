@@ -13,7 +13,7 @@ on:
         default: 'school-web-app'
         options:
           - 'pg-school-db'
-          - 'school-web-app'
+          - 'SchoolWebApp'
 
 jobs:
   deploy:
