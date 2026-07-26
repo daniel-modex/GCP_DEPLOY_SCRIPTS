@@ -10,11 +10,6 @@ on:
         options:
           - 'pg-school-db'
           - 'web-app-vm'
-  push:
-    branches:
-      - main
-    paths:
-      - 'config/**'
 
 jobs:
   deploy:
