@@ -43,7 +43,8 @@ RAW_ENV=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/
 echo "[DEBUG] RAW_ENV fetched from metadata: ${RAW_ENV}"
 
 get_env_val() {
-  echo "$RAW_ENV" | tr ',' '\n' | grep "^$1=" | cut -d'=' -f2-
+  local key="$1"
+  echo "$RAW_ENV" | tr ',' '\n' | awk -F'=' -v k="$key" '$1 == k { print substr($0, length(k)+2) }'
 }
 
 GH_PAT="$(get_env_val "GH_PAT")"
