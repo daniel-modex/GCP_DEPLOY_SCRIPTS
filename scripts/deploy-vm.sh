@@ -59,6 +59,14 @@ else
   echo "WARNING: Startup script path '$STARTUP_SCRIPT_PATH' was not found or not specified!"
 fi
 
+# Optional 6: Environment Variables
+if [ -n "${ENV_VARS:-}" ]; then
+  echo "Attaching custom environment variables via metadata..."
+  GCLOUD_FLAGS+=( "--metadata=APP_ENV_VARS=${ENV_VARS}" )
+else
+  echo "WARNING: Environment variables not specified!"
+fi
+
 # Redeployment Handling: Delete existing VM if it exists
 if gcloud compute instances describe "$VM_NAME" --zone="$ZONE" >/dev/null 2>&1; then
   echo "VM $VM_NAME already exists. Redeploying instance..."

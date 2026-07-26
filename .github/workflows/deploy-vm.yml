@@ -1,5 +1,8 @@
 name: Deploy GCP VM Instances
 
+env:
+  ALL_SECRETS_JSON: ${{ toJson(secrets) }}
+
 on:
   workflow_dispatch:
     inputs:
@@ -32,7 +35,26 @@ jobs:
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Run Deployment
+        env:
+          ALL_SECRETS_JSON: ${{ toJson(secrets) }}
         run: |
+
+          CONFIG_FILE="config/${{ github.event.inputs.config_name }}.env"
+          source "$CONFIG_FILE"
+
+          if [ -n "$REQUIRED_SECRETS" ]; then
+            ENV_VARS_ARRAY=()
+            IFS=',' read -ra KEYS <<< "$REQUIRED_SECRETS"
+            for KEY in "${KEYS[@]}"; do
+              KEY=$(echo "$KEY" | xargs)
+              VAL=$(echo "$ALL_SECRETS_JSON" | jq -r --arg k "$KEY" '.[$k] // empty')
+              if [ -n "$VAL" ]; then
+                ENV_VARS_ARRAY+=("${KEY}=${VAL}")
+              fi
+            done
+            IFS=',' ; export ENV_VARS="${ENV_VARS_ARRAY[*]}"
+          fi
+          
           chmod +x scripts/deploy-vm.sh
           
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
