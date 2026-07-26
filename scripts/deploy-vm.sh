@@ -33,6 +33,10 @@ if [ -n "$LABELS" ]; then
   GCLOUD_FLAGS+=( "--labels=${LABELS}" )
 fi
 
+if [ -n "$TAGS" ]; then
+  GCLOUD_FLAGS+=( "--tags=${TAGS}" )
+fi
+
 # Optional 4: Persistent Disk Attachment
 if [ "$ATTACH_DISK" = "true" ] && [ -n "$DISK_NAME" ]; then
   # Create disk if it doesn't already exist
