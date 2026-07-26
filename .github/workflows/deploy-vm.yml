@@ -34,33 +34,42 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-      - name: Run Deployment
+     -  name: Run Deployment
         env:
           ALL_SECRETS_JSON: ${{ toJson(secrets) }}
         run: |
-
           CONFIG_FILE="config/${{ github.event.inputs.config_name }}.env"
+          
+          if [ "${{ github.event_name }}" != "workflow_dispatch" ]; then
+            CONFIG_FILE=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | grep '^config/' | head -n 1)
+          fi
+
           source "$CONFIG_FILE"
 
           if [ -n "$REQUIRED_SECRETS" ]; then
+            echo "REQUIRED_SECRETS defined as: '$REQUIRED_SECRETS'"
             ENV_VARS_ARRAY=()
+            
+            # Split REQUIRED_SECRETS by comma
             IFS=',' read -ra KEYS <<< "$REQUIRED_SECRETS"
             for KEY in "${KEYS[@]}"; do
+              # Clean whitespace
               KEY=$(echo "$KEY" | xargs)
               VAL=$(echo "$ALL_SECRETS_JSON" | jq -r --arg k "$KEY" '.[$k] // empty')
+              
               if [ -n "$VAL" ]; then
+                echo " [FOUND] Secret key: '$KEY'"
                 ENV_VARS_ARRAY+=("${KEY}=${VAL}")
+              else
+                echo " [MISSING] Secret key '$KEY' was not found in GitHub Secrets!"
               fi
             done
-            IFS=',' ; export ENV_VARS="${ENV_VARS_ARRAY[*]}"
+            
+            # Join array with commas
+            ENV_VARS=$(IFS=, ; echo "${ENV_VARS_ARRAY[*]}")
+            export ENV_VARS
+            echo "Final ENV_VARS payload length: ${#ENV_VARS}"
           fi
 
           chmod +x scripts/deploy-vm.sh
-          
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            CONFIG="config/${{ github.event.inputs.config_name }}.env"
-          else
-            CONFIG=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | grep '^config/' | head -n 1)
-          fi
-          
-          ./scripts/deploy-vm.sh "$CONFIG"
+          ./scripts/deploy-vm.sh "$CONFIG_FILE"
