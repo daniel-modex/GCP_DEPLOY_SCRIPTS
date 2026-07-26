@@ -33,7 +33,7 @@ jobs:
 
       - name: Run Deployment
         env:
-          APP_SECRETS_CONTENT: ${{ toJson(secrets.SCHOOLWEBAPP) }}
+          APP_SECRETS_CONTENT: ${{ secrets.SCHOOLWEBAPP }}
         run: |
           CONFIG_FILE="config/${{ github.event.inputs.config_name }}.env"
           
