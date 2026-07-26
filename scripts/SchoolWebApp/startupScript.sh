@@ -39,10 +39,12 @@ apt-get install -y nodejs
 npm install -g pm2
 
 # 5. Extract JSON Secrets from Metadata and export as Environment Variables
-RAW_SECRETS_JSON=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/attributes/APP_SECRETS_JSON")
+RAW_METADATA=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/attributes/APP_SECRETS_JSON")
 
-if [ -n "$RAW_SECRETS_JSON" ] && [ "$RAW_SECRETS_JSON" != "Not Found" ]; then
-  echo "Parsing secrets JSON into environment variables..."
+if [ -n "$RAW_METADATA" ] && [ "$RAW_METADATA" != "Not Found" ]; then
+  echo "Decoding secrets JSON and parsing into environment variables..."
+  
+  RAW_SECRETS_JSON=$(echo "$RAW_METADATA" | base64 --decode)
   
   # Loop over JSON key-value pairs and add to /etc/environment and current context
   while IFS="=" read -r key value; do
