@@ -77,9 +77,11 @@ DATABASE_URL="${DATABASE_URL:-}"
 AUTH_SECRET="${AUTH_SECRET:-}"
 EOT
 
+export NEXT_TELEMETRY_DISABLED=1
+export NODE_OPTIONS="--max-old-space-size=1536"
 # 8. Build and run app
 npm install
-npm run build
+npx next build --no-lint
 
 pm2 start npm --name "timetable-app" -- run start
 pm2 save
