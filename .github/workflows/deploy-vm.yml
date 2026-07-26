@@ -13,7 +13,7 @@ on:
           default: 'lightweight-app'
           options:
             - 'pg-school-db'
-            - 'web-app-vm'
+            - 'school-web-app'
 
 jobs:
   deploy:
@@ -54,7 +54,7 @@ jobs:
             done
             IFS=',' ; export ENV_VARS="${ENV_VARS_ARRAY[*]}"
           fi
-          
+
           chmod +x scripts/deploy-vm.sh
           
           if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
