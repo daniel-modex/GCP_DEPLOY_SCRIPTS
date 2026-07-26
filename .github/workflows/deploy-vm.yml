@@ -7,13 +7,13 @@ on:
   workflow_dispatch:
     inputs:
       config_name:
-          description: 'Select environment config to deploy'
-          required: true
-          type: choice
-          default: 'lightweight-app'
-          options:
-            - 'pg-school-db'
-            - 'school-web-app'
+        description: 'Select environment config to deploy'
+        required: true
+        type: choice
+        default: 'school-web-app'
+        options:
+          - 'pg-school-db'
+          - 'school-web-app'
 
 jobs:
   deploy:
@@ -34,7 +34,7 @@ jobs:
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
-     -  name: Run Deployment
+      - name: Run Deployment
         env:
           ALL_SECRETS_JSON: ${{ toJson(secrets) }}
         run: |
@@ -44,17 +44,24 @@ jobs:
             CONFIG_FILE=$(git diff-tree --no-commit-id --name-only -r ${{ github.sha }} | grep '^config/' | head -n 1)
           fi
 
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "Error: Config file '$CONFIG_FILE' not found!"
+            exit 1
+          fi
+
           source "$CONFIG_FILE"
 
-          if [ -n "$REQUIRED_SECRETS" ]; then
+          if [ -n "${REQUIRED_SECRETS:-}" ]; then
             echo "REQUIRED_SECRETS defined as: '$REQUIRED_SECRETS'"
             ENV_VARS_ARRAY=()
             
-            # Split REQUIRED_SECRETS by comma
-            IFS=',' read -ra KEYS <<< "$REQUIRED_SECRETS"
-            for KEY in "${KEYS[@]}"; do
-              # Clean whitespace
+            # Convert comma-separated string to list safely
+            CLEAN_SECRETS=$(echo "$REQUIRED_SECRETS" | tr ',' '\n')
+            
+            while IFS= read -r KEY; do
               KEY=$(echo "$KEY" | xargs)
+              [ -z "$KEY" ] && continue
+              
               VAL=$(echo "$ALL_SECRETS_JSON" | jq -r --arg k "$KEY" '.[$k] // empty')
               
               if [ -n "$VAL" ]; then
@@ -63,12 +70,17 @@ jobs:
               else
                 echo " [MISSING] Secret key '$KEY' was not found in GitHub Secrets!"
               fi
-            done
+            done <<< "$CLEAN_SECRETS"
             
             # Join array with commas
-            ENV_VARS=$(IFS=, ; echo "${ENV_VARS_ARRAY[*]}")
-            export ENV_VARS
-            echo "Final ENV_VARS payload length: ${#ENV_VARS}"
+            DYNAMIC_ENV_VARS=$(IFS=, ; echo "${ENV_VARS_ARRAY[*]}")
+            
+            # Append ENV_VARS directly into the config file so deploy-vm.sh can read it when sourced
+            echo "" >> "$CONFIG_FILE"
+            echo "ENV_VARS=\"$DYNAMIC_ENV_VARS\"" >> "$CONFIG_FILE"
+            
+            export ENV_VARS="$DYNAMIC_ENV_VARS"
+            echo "Successfully attached ENV_VARS payload to $CONFIG_FILE"
           fi
 
           chmod +x scripts/deploy-vm.sh
