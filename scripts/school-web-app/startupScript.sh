@@ -5,7 +5,31 @@ export DEBIAN_FRONTEND=noninteractive
 
 # Install Node.js or Python depending on your stack
 apt-get update -y
-apt-get install -y git curl
+apt-get install -y git curl nginx
+
+
+cat <<'EOF' > /etc/nginx/sites-available/default
+server {
+    listen 80;
+    server_name _; # Works for raw IP access, or replace with your domain name later
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+EOF
+
+nginx -t
+systemctl restart nginx
+systemctl enable nginx
 
 # Install Node.js (Example for Node app)
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
@@ -31,7 +55,7 @@ cat <<EOT > .env
 DATABASE_URL=$(get_env_val "SCHOOL_WEB_APP_DB_URL")
 AUTH_SECRET="$(get_env_val "SCHOOL_WEB_APP_AUTH_SECRET")"
 EOT
-
+HOSTNAME="0.0.0.0" PORT=3000
 # Install and Start App
 npm install
 npm run build
