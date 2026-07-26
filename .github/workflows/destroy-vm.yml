@@ -1,0 +1,62 @@
+name: Destroy GCP VM Instance
+
+on:
+  workflow_dispatch:
+    inputs:
+      config_name:
+        description: 'Select environment config to DESTROY'
+        required: true
+        type: choice
+        default: 'schooldb-vm'
+        options:
+          - 'pg-school-db'
+          - 'web-app-vm'
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Destroy Selected VM
+        run: |
+          CONFIG_FILE="config/${{ github.event.inputs.config_name }}.env"
+
+          if [ ! -f "$CONFIG_FILE" ]; then
+            echo "Error: Configuration file '$CONFIG_FILE' not found."
+            exit 1
+          fi
+
+          # Source config file to extract VM_NAME and ZONE
+          source "$CONFIG_FILE"
+
+          if [ -z "$VM_NAME" ] || [ -z "$ZONE" ]; then
+            echo "Error: VM_NAME or ZONE missing in $CONFIG_FILE"
+            exit 1
+          fi
+
+          echo "=== Initiating deletion for VM: ${VM_NAME} in Zone: ${ZONE} ==="
+
+          if gcloud compute instances describe "$VM_NAME" --zone="$ZONE" >/dev/null 2>&1; then
+            echo "Deleting instance $VM_NAME (preserving detached persistent disks)..."
+            gcloud compute instances delete "$VM_NAME" \
+                --zone="$ZONE" \
+                --quiet \
+                --keep-disks=all
+            echo "=== Successfully destroyed $VM_NAME ==="
+          else
+            echo "Instance $VM_NAME does not exist in zone $ZONE. Skipping."
+          fi
