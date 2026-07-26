@@ -3,15 +3,15 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-# Install Node.js or Python depending on your stack
+# 1. Install basic dependencies and Nginx
 apt-get update -y
 apt-get install -y git curl nginx
 
-
+# 2. Configure Nginx Reverse Proxy
 cat <<'EOF' > /etc/nginx/sites-available/default
 server {
     listen 80;
-    server_name _; # Works for raw IP access, or replace with your domain name later
+    server_name _;
 
     location / {
         proxy_pass http://127.0.0.1:3000;
@@ -31,11 +31,14 @@ nginx -t
 systemctl restart nginx
 systemctl enable nginx
 
-# Install Node.js (Example for Node app)
+# 3. Install Node.js
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt-get install -y nodejs pm2
+apt-get install -y nodejs
 
-# Clone repository
+# 4. Install PM2 globally
+npm install -g pm2
+
+# 5. Clone repository
 mkdir -p /var/www
 cd /var/www
 if [ ! -d "school-timetable-management" ]; then
@@ -44,7 +47,7 @@ fi
 
 cd school-timetable-management
 
-# Create .env for Database Connection
+# 6. Fetch Metadata and populate .env file
 RAW_ENV=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/attributes/APP_ENV_VARS")
 
 get_env_val() {
@@ -52,15 +55,14 @@ get_env_val() {
 }
 
 cat <<EOT > .env
-DATABASE_URL=$(get_env_val "SCHOOL_WEB_APP_DB_URL")
+DATABASE_URL="$(get_env_val "SCHOOL_WEB_APP_DB_URL")"
 AUTH_SECRET="$(get_env_val "SCHOOL_WEB_APP_AUTH_SECRET")"
 EOT
-HOSTNAME="0.0.0.0" PORT=3000
-# Install and Start App
+
+# 7. Install dependencies, build, and start app
 npm install
 npm run build
 
-sudo npm install -g pm2
 pm2 start npm --name "timetable-app" -- run start
-pm2 startup
 pm2 save
+pm2 startup
