@@ -6,7 +6,7 @@ MOUNT_POINT="/mnt/disks/db"
 POSTGRES_DB_NAME="schooldb"
 POSTGRES_USER="test.user.dev"
 POSTGRES_PASSWORD="ForNowIwiLLkEEpThis" 
-POSTGRES_PORT="5432"
+POSTGRES_PORT="15522"
 
 echo "=== Starting PostgreSQL & Persistent Disk Setup ==="
 
