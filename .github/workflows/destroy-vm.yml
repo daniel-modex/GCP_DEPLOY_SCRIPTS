@@ -10,7 +10,7 @@ on:
         default: 'schooldb-vm'
         options:
           - 'pg-school-db'
-          - 'web-app-vm'
+          - 'school-web-app'
 
 jobs:
   destroy:
