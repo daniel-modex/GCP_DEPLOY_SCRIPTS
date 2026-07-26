@@ -47,10 +47,13 @@ else
     echo "Disk $TARGET_DEVICE is already formatted."
 fi
 
-# 4. Create mount directory and mount disk
+# 4. Create mount directory
 mkdir -p "$MOUNT_POINT"
 
-if ! mountpoint -q "$MOUNT_POINT"; then
+# Check if ALREADY mounted before calling mount command
+if mountpoint -q "$MOUNT_POINT" || grep -q "$TARGET_DEVICE" /proc/mounts; then
+    echo "Disk $TARGET_DEVICE is already mounted at $MOUNT_POINT or another path."
+else
     echo "Mounting $TARGET_DEVICE to $MOUNT_POINT..."
     mount -o discard,defaults "$TARGET_DEVICE" "$MOUNT_POINT"
 fi
