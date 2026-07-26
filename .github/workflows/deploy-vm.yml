@@ -2,14 +2,15 @@ name: Deploy GCP VM Instances
 
 on:
   workflow_dispatch:
-    config_name:
-        description: 'Select environment config to deploy'
-        required: true
-        type: choice
-        default: 'lightweight-app'
-        options:
-          - 'pg-school-db'
-          - 'web-app-vm'
+    inputs:
+      config_name:
+          description: 'Select environment config to deploy'
+          required: true
+          type: choice
+          default: 'lightweight-app'
+          options:
+            - 'pg-school-db'
+            - 'web-app-vm'
 
 jobs:
   deploy:
