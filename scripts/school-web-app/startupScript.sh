@@ -40,6 +40,8 @@ npm install -g pm2
 
 RAW_ENV=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/attributes/APP_ENV_VARS")
 
+echo "[DEBUG] RAW_ENV fetched from metadata: ${RAW_ENV}"
+
 get_env_val() {
   echo "$RAW_ENV" | tr ',' '\n' | grep "^$1=" | cut -d'=' -f2-
 }
