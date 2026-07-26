@@ -58,12 +58,11 @@ else
 fi
 
 # Inject raw JSON secrets payload directly into Instance Metadata
-if [ -n "${APP_SECRETS_JSON:-}" ]; then
+if [ -n "${APP_SECRETS_ENCODED:-}" ]; then
   echo "Attaching base64 encoded secrets JSON payload via metadata..."
-  ENCODED_SECRETS=$(echo -n "${APP_SECRETS_JSON}" | base64 | tr -d '\r\n')
-  GCLOUD_FLAGS+=( "--metadata=APP_SECRETS_JSON=${ENCODED_SECRETS}" )
+  GCLOUD_FLAGS+=( "--metadata=APP_SECRETS_JSON=${APP_SECRETS_ENCODED}" )
 else
-  echo "WARNING: APP_SECRETS_JSON not provided!"
+  echo "WARNING: APP_SECRETS_ENCODED not provided!"
 fi
 
 # Redeployment Handling

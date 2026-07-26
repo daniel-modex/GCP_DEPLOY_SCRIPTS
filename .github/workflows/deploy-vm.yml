@@ -33,7 +33,7 @@ jobs:
 
       - name: Run Deployment
         env:
-          APP_SECRETS_JSON: ${{ secrets.SCHOOLWEBAPP }}
+          APP_SECRETS_JSON: ${{ toJson(secrets.SCHOOLWEBAPP) }}
         run: |
           CONFIG_FILE="config/${{ github.event.inputs.config_name }}.env"
           
@@ -45,6 +45,10 @@ jobs:
             echo "Error: Config file '$CONFIG_FILE' not found!"
             exit 1
           fi
+
+          # Encode secrets safely to avoid shell escaping issues
+          APP_SECRETS_ENCODED=$(echo -n "$APP_SECRETS_CONTENT" | base64 | tr -d '\r\n')
+          export APP_SECRETS_ENCODED
 
           chmod +x scripts/deploy-vm.sh
           ./scripts/deploy-vm.sh "$CONFIG_FILE"
