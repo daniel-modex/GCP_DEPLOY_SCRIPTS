@@ -38,21 +38,24 @@ apt-get install -y nodejs
 # 4. Install PM2 globally
 npm install -g pm2
 
-# 5. Clone repository
-mkdir -p /var/www
-cd /var/www
-if [ ! -d "school-timetable-management" ]; then
-  git clone https://github.com/daniel-modex/school-timetable-management.git
-fi
-
-cd school-timetable-management
-
-# 6. Fetch Metadata and populate .env file
 RAW_ENV=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/attributes/APP_ENV_VARS")
 
 get_env_val() {
   echo "$RAW_ENV" | tr ',' '\n' | grep "^$1=" | cut -d'=' -f2-
 }
+
+GH_PAT="$(get_env_val "GH_PAT")"
+
+# 5. Clone repository
+mkdir -p /var/www
+cd /var/www
+if [ ! -d "school-timetable-management" ]; then
+  git clone "https://oauth2:${GH_PAT}@github.com/daniel-modex/school-timetable-management.git"
+fi
+
+cd school-timetable-management
+
+# 6. Fetch Metadata and populate .env file
 
 cat <<EOT > .env
 DATABASE_URL="$(get_env_val "SCHOOL_WEB_APP_DB_URL")"
