@@ -55,6 +55,8 @@ fi
 if [ -n "$STARTUP_SCRIPT_PATH" ] && [ -f "$STARTUP_SCRIPT_PATH" ]; then
   echo "Attaching startup script: $STARTUP_SCRIPT_PATH"
   GCLOUD_FLAGS+=( "--metadata-from-file=startup-script=$STARTUP_SCRIPT_PATH" )
+else
+  echo "WARNING: Startup script path '$STARTUP_SCRIPT_PATH' was not found or not specified!"
 fi
 
 # Redeployment Handling: Delete existing VM if it exists
