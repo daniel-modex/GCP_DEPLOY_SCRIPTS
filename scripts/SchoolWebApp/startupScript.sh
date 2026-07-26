@@ -81,7 +81,7 @@ export NEXT_TELEMETRY_DISABLED=1
 export NODE_OPTIONS="--max-old-space-size=1536"
 # 8. Build and run app
 npm install
-npx next build --no-lint
+npx next build
 
 pm2 start npm --name "timetable-app" -- run start
 pm2 save
