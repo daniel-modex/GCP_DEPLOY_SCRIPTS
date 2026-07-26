@@ -64,7 +64,9 @@ if gcloud compute instances describe "$VM_NAME" --zone="$ZONE" >/dev/null 2>&1; 
   echo "VM $VM_NAME already exists. Redeploying instance..."
   gcloud compute instances delete "$VM_NAME" --zone="$ZONE" --quiet --keep-disks=all
 fi
-
+echo "=== Deploying VM: ${VM_NAME} in Zone: ${ZONE} ==="
+echo "Using configuration file: ${CONFIG_FILE}"
+echo "Optional gcloud flags: ${GCLOUD_FLAGS[*]}"
 # Create VM with dynamically built flags
 echo "Provisioning instance $VM_NAME..."
 gcloud compute instances create "$VM_NAME" \
