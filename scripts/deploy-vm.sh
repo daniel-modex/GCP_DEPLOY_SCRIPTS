@@ -18,17 +18,16 @@ fi
 
 echo "=== Processing VM Deployment: ${VM_NAME} (${ZONE}) ==="
 
-# Build optional gcloud flags array
 GCLOUD_FLAGS=()
 
-# Optional 1: Machine Type (Defaults to e2-micro if omitted)
+# Machine Type
 GCLOUD_FLAGS+=( "--machine-type=${MACHINE_TYPE:-e2-micro}" )
 
-# Optional 2: OS Image Settings
+# OS Image Settings
 GCLOUD_FLAGS+=( "--image-family=${IMAGE_FAMILY:-ubuntu-2204-lts}" )
 GCLOUD_FLAGS+=( "--image-project=${IMAGE_PROJECT:-ubuntu-os-cloud}" )
 
-# Optional 3: Labels
+# Labels & Tags
 if [ -n "$LABELS" ]; then
   GCLOUD_FLAGS+=( "--labels=${LABELS}" )
 fi
@@ -37,9 +36,8 @@ if [ -n "$TAGS" ]; then
   GCLOUD_FLAGS+=( "--tags=${TAGS}" )
 fi
 
-# Optional 4: Persistent Disk Attachment
+# Persistent Disk
 if [ "$ATTACH_DISK" = "true" ] && [ -n "$DISK_NAME" ]; then
-  # Create disk if it doesn't already exist
   if ! gcloud compute disks describe "$DISK_NAME" --zone="$ZONE" >/dev/null 2>&1; then
     echo "Creating persistent disk: $DISK_NAME..."
     gcloud compute disks create "$DISK_NAME" \
@@ -51,7 +49,7 @@ if [ "$ATTACH_DISK" = "true" ] && [ -n "$DISK_NAME" ]; then
   GCLOUD_FLAGS+=( "--disk=name=$DISK_NAME,mode=rw,boot=no,auto-delete=no" )
 fi
 
-# Optional 5: Startup Script
+# Startup Script
 if [ -n "$STARTUP_SCRIPT_PATH" ] && [ -f "$STARTUP_SCRIPT_PATH" ]; then
   echo "Attaching startup script: $STARTUP_SCRIPT_PATH"
   GCLOUD_FLAGS+=( "--metadata-from-file=startup-script=$STARTUP_SCRIPT_PATH" )
@@ -59,24 +57,21 @@ else
   echo "WARNING: Startup script path '$STARTUP_SCRIPT_PATH' was not found or not specified!"
 fi
 
-# Optional 6: Environment Variables
-if [ -n "${ENV_VARS:-}" ]; then
-  echo "Attaching custom environment variables via metadata..."
-  GCLOUD_FLAGS+=( "--metadata=APP_ENV_VARS=${ENV_VARS}" )
+# Inject raw JSON secrets payload directly into Instance Metadata
+if [ -n "${APP_SECRETS_JSON:-}" ]; then
+  echo "Attaching secrets JSON payload via metadata..."
+  GCLOUD_FLAGS+=( "--metadata=APP_SECRETS_JSON=${APP_SECRETS_JSON}" )
 else
-  echo "WARNING: Environment variables not specified!"
+  echo "WARNING: APP_SECRETS_JSON not provided!"
 fi
 
-# Redeployment Handling: Delete existing VM if it exists
+# Redeployment Handling
 if gcloud compute instances describe "$VM_NAME" --zone="$ZONE" >/dev/null 2>&1; then
   echo "VM $VM_NAME already exists. Redeploying instance..."
   gcloud compute instances delete "$VM_NAME" --zone="$ZONE" --quiet --keep-disks=all
 fi
+
 echo "=== Deploying VM: ${VM_NAME} in Zone: ${ZONE} ==="
-echo "Using configuration file: ${CONFIG_FILE}"
-echo "Optional gcloud flags: ${GCLOUD_FLAGS[*]}"
-# Create VM with dynamically built flags
-echo "Provisioning instance $VM_NAME..."
 gcloud compute instances create "$VM_NAME" \
     --zone="$ZONE" \
     "${GCLOUD_FLAGS[@]}"

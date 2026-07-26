@@ -3,11 +3,11 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-# 1. Install basic dependencies and Nginx
+# 1. Install dependencies, Nginx, and jq
 apt-get update -y
-apt-get install -y git curl nginx
+apt-get install -y git curl nginx jq
 
-# 2. Configure Nginx Reverse Proxy
+# 2. Configure Nginx
 cat <<'EOF' > /etc/nginx/sites-available/default
 server {
     listen 80;
@@ -38,18 +38,22 @@ apt-get install -y nodejs
 # 4. Install PM2 globally
 npm install -g pm2
 
-RAW_ENV=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/attributes/APP_ENV_VARS")
+# 5. Extract JSON Secrets from Metadata and export as Environment Variables
+RAW_SECRETS_JSON=$(curl -s -H "Metadata-Flavor: Google" "http://metadata.google.internal/computeMetadata/v1/instance/attributes/APP_SECRETS_JSON")
 
-echo "[DEBUG] RAW_ENV fetched from metadata: ${RAW_ENV}"
+if [ -n "$RAW_SECRETS_JSON" ] && [ "$RAW_SECRETS_JSON" != "Not Found" ]; then
+  echo "Parsing secrets JSON into environment variables..."
+  
+  # Loop over JSON key-value pairs and add to /etc/environment and current context
+  while IFS="=" read -r key value; do
+    if [ -n "$key" ]; then
+      echo "${key}=${value}" >> /etc/environment
+      export "${key}=${value}"
+    fi
+  done < <(echo "$RAW_SECRETS_JSON" | jq -r 'to_entries[] | "\(.key)=\(.value)"')
+fi
 
-get_env_val() {
-  local key="$1"
-  echo "$RAW_ENV" | tr ',' '\n' | awk -F'=' -v k="$key" '$1 == k { print substr($0, length(k)+2) }'
-}
-
-GH_PAT="$(get_env_val "GH_PAT")"
-
-# 5. Clone repository
+# 6. Clone repository using extracted GH_PAT variable
 mkdir -p /var/www
 cd /var/www
 if [ ! -d "school-timetable-management" ]; then
@@ -58,14 +62,13 @@ fi
 
 cd school-timetable-management
 
-# 6. Fetch Metadata and populate .env file
-
+# 7. Write application .env file directly from system environment variables
 cat <<EOT > .env
-DATABASE_URL="$(get_env_val "SCHOOL_WEB_APP_DB_URL")"
-AUTH_SECRET="$(get_env_val "SCHOOL_WEB_APP_AUTH_SECRET")"
+DATABASE_URL="${DATABASE_URL:-}"
+AUTH_SECRET="${AUTH_SECRET:-}"
 EOT
 
-# 7. Install dependencies, build, and start app
+# 8. Build and run app
 npm install
 npm run build
 
