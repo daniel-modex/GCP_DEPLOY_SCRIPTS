@@ -62,7 +62,7 @@ jobs:
               KEY=$(echo "$KEY" | xargs)
               [ -z "$KEY" ] && continue
               
-              VAL=$(echo "$ALL_SECRETS_JSON" | jq -r --arg k "$KEY" '.[$k] // empty')
+              VAL=$(echo "$ALL_SECRETS_JSON" | jq -r --arg k "$KEY" '.[$k] // empty' | tr -d '\r\n')
               
               if [ -n "$VAL" ]; then
                 echo " [FOUND] Secret key: '$KEY'"
