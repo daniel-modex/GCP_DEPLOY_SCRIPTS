@@ -7,7 +7,7 @@ on:
         description: 'Select environment config to DESTROY'
         required: true
         type: choice
-        default: 'schooldb-vm'
+        default: 'pg-school-db'
         options:
           - 'pg-school-db'
           - 'SchoolWebApp'
@@ -40,7 +40,7 @@ jobs:
             exit 1
           fi
 
-          # Source config file to extract VM_NAME and ZONE
+          # Source config file to extract variables
           source "$CONFIG_FILE"
 
           if [ -z "$VM_NAME" ] || [ -z "$ZONE" ]; then
@@ -51,11 +51,22 @@ jobs:
           echo "=== Initiating deletion for VM: ${VM_NAME} in Zone: ${ZONE} ==="
 
           if gcloud compute instances describe "$VM_NAME" --zone="$ZONE" >/dev/null 2>&1; then
-            echo "Deleting instance $VM_NAME (preserving detached persistent disks)..."
-            gcloud compute instances delete "$VM_NAME" \
-                --zone="$ZONE" \
-                --quiet \
-                --keep-disks=all
+            
+            # Check if ATTACH_DISK is true and DISK_NAME exists
+            if [ "${ATTACH_DISK:-false}" == "true" ] && [ -n "${DISK_NAME:-}" ]; then
+              echo "Preserving attached data disk '$DISK_NAME' and deleting VM boot disk..."
+              gcloud compute instances delete "$VM_NAME" \
+                  --zone="$ZONE" \
+                  --quiet \
+                  --keep-disks="boot=no,data=${DISK_NAME}"
+            else
+              echo "Deleting VM $VM_NAME and all attached disks..."
+              gcloud compute instances delete "$VM_NAME" \
+                  --zone="$ZONE" \
+                  --quiet \
+                  --delete-disks=all
+            fi
+
             echo "=== Successfully destroyed $VM_NAME ==="
           else
             echo "Instance $VM_NAME does not exist in zone $ZONE. Skipping."
